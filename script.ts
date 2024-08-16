@@ -9,8 +9,7 @@ const v8 = require('v8');
 v8.setFlagsFromString('--expose_gc');
 const gc = global.gc;
 
-// const appId = "{{AppID}}";
-const appId = "c99be9a4-8ccf-4c29-aabb-7ea0c7242ebc";
+const appId = "{{AppID}}";
 const branchName = null // null for mainline
 const wc = null;
 const client = new MendixPlatformClient();
