@@ -22,22 +22,6 @@ function truncateString(str: string, maxLength: number = 32000): string {
     return str;
 }
 
-// Functie om lange strings af te kappen
-function truncateString(str: string, maxLength: number = 32000): string {
-    if (str && str.length > maxLength) {
-        return str.substring(0, maxLength) + '...';
-    }
-    return str;
-}
-
-// Functie om lange strings af te kappen
-function truncateString(str: string, maxLength: number = 32000): string {
-    if (str && str.length > maxLength) {
-        return str.substring(0, maxLength) + '...';
-    }
-    return str;
-}
-
 const sheet = xlsx.makeNewSheet();
 sheet.name = 'Entities';
 
