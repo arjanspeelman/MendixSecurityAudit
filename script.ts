@@ -151,13 +151,13 @@ async function processModRole(modRole: security.IModuleRole, userRole: security.
                 .then(() => processAllNanoflows(modRole, userRole, workbook))));
     }
 }
-async function processAllEntitySecurityRules(entity: domainmodels.IEntity, moduleRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
+async function processAllEntitySecurityRules(entity: domainmodels.IEntity, moduleRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     await entity.load().then(loadedEntity =>
-        checkIfModuleRoleIsUsedForEntityRole(loadedEntity, loadedEntity.accessRules, moduleRole, userRole));
+        checkIfModuleRoleIsUsedForEntityRole(loadedEntity, loadedEntity.accessRules, moduleRole, userRole, workbook));
 }
 
-async function processAllPages(modRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
-    await Promise.all(modRole.model.allPages().map(async (page) => processPage(modRole, userRole, page)));
+async function processAllPages(modRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
+    await Promise.all(modRole.model.allPages().map(async (page) => processPage(modRole, userRole, page, workbook)));
 }
 
 async function processPage(modRole: security.IModuleRole, userRole: security.UserRole, page: pages.IPage, workbook: ExcelJS.Workbook): Promise<void> {
