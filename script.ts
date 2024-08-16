@@ -14,10 +14,9 @@ const appId = "c99be9a4-8ccf-4c29-aabb-7ea0c7242ebc";
 const branchName = null // null for mainline
 const wc = null;
 const client = new MendixPlatformClient();
-const workbook = new ExcelJS.Workbook();
 let pObj;
 
-const CHUNK_SIZE = 5000; // Verhoogd aantal items om per keer te verwerken
+const CHUNK_SIZE = 10000; // Verder verhoogd aantal items om per keer te verwerken
 
 // Functie om lange strings af te kappen
 function truncateString(str: string, maxLength: number = 32000): string {
@@ -27,17 +26,23 @@ function truncateString(str: string, maxLength: number = 32000): string {
     return str;
 }
 
-const sheetEntities = workbook.addWorksheet('Entities');
-sheetEntities.addRow(['User Role', 'Module', 'Module Role', 'Entity', 'Xpath', 'Create/Delete', 'Member Rules']);
+// Functie om een nieuwe Excel workbook en worksheets te maken
+function createWorkbook() {
+    const workbook = new ExcelJS.Workbook();
+    const sheetEntities = workbook.addWorksheet('Entities');
+    sheetEntities.addRow(['User Role', 'Module', 'Module Role', 'Entity', 'Xpath', 'Create/Delete', 'Member Rules']);
 
-const sheetPages = workbook.addWorksheet('Pages');
-sheetPages.addRow(['User Role', 'Module', 'Module Role', 'Page Name', 'Allowed']);
+    const sheetPages = workbook.addWorksheet('Pages');
+    sheetPages.addRow(['User Role', 'Module', 'Module Role', 'Page Name', 'Allowed']);
 
-const sheetMicroflows = workbook.addWorksheet('Microflows');
-sheetMicroflows.addRow(['User Role', 'Module', 'Module Role', 'Microflows', 'Allowed']);
+    const sheetMicroflows = workbook.addWorksheet('Microflows');
+    sheetMicroflows.addRow(['User Role', 'Module', 'Module Role', 'Microflows', 'Allowed']);
 
-const sheetNanoflows = workbook.addWorksheet('Nanoflows');
-sheetNanoflows.addRow(['User Role', 'Module', 'Module Role', 'Nanoflows', 'Allowed']);
+    const sheetNanoflows = workbook.addWorksheet('Nanoflows');
+    sheetNanoflows.addRow(['User Role', 'Module', 'Module Role', 'Nanoflows', 'Allowed']);
+
+    return workbook;
+}
 
 /*
  * PROJECT TO ANALYZE
@@ -65,33 +70,44 @@ async function main() {
     const projectSecurity = await loadProjectSecurity(workingCopy);
     const userRoles = getAllUserRoles(projectSecurity);
 
-    await createUserSecurityDocument(userRoles);
+    const workbook = createWorkbook();
+    await createUserSecurityDocument(userRoles, workbook);
 
-    await workbook.xlsx.writeFile('MendixSecurityDocument.xlsx');
-    console.log('Finished creating Document');
-
-    // Forceer garbage collection
-    if (global.gc) {
-        global.gc();
-    }
+    const writeStream = fs.createWriteStream('MendixSecurityDocument.xlsx');
+    await workbook.xlsx.write(writeStream);
+    writeStream.on('finish', () => {
+        console.log('Finished creating Document');
+        // Forceer garbage collection
+        if (global.gc) {
+            global.gc();
+        }
+    });
 }
 
 /**
 * This function picks the first navigation document in the project.
 */
-async function createUserSecurityDocument(userRoles: security.UserRole[]) {
+async function createUserSecurityDocument(userRoles: security.UserRole[], workbook: ExcelJS.Workbook) {
     console.log("Creating User Access Matrix");
     for (let i = 0; i < userRoles.length; i += CHUNK_SIZE) {
         const chunk = userRoles.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(async (userRole) => processAllModules(userRole)));
+        await Promise.all(chunk.map(async (userRole) => processAllModules(userRole, workbook)));
+        // Forceer garbage collection na elke chunk
+        if (global.gc) {
+            global.gc();
+        }
     }
 }
 
-async function processAllModules(userRole: security.UserRole): Promise<void> {
+async function processAllModules(userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     const modules = userRole.model.allModules();
     for (let i = 0; i < modules.length; i += CHUNK_SIZE) {
         const chunk = modules.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(async (module) => processModule(module, userRole)));
+        await Promise.all(chunk.map(async (module) => processModule(module, userRole, workbook)));
+        // Forceer garbage collection na elke chunk
+        if (global.gc) {
+            global.gc();
+        }
     }
 }
 
