@@ -99,7 +99,7 @@ async function processAllModules(userRole: security.UserRole, workbook: ExcelJS.
     const modules = userRole.model.allModules();
     for (let i = 0; i < modules.length; i += CHUNK_SIZE) {
         const chunk = modules.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(async (module) => processModule(module, userRole)));
+        await Promise.all(chunk.map(async (module) => processModule(module, userRole, workbook)));
         // Forceer garbage collection na elke chunk
         if (global.gc) {
             global.gc();
@@ -162,8 +162,8 @@ async function processAllPages(modRole: security.IModuleRole, userRole: security
     await Promise.all(modRole.model.allPages().map(async (page) => processPage(modRole, userRole, page)));
 }
 
-async function processPage(modRole: security.IModuleRole, userRole: security.UserRole, page: pages.IPage): Promise<void> {
-    await page.load().then(loadedPage => addPage(modRole, userRole, loadedPage));
+async function processPage(modRole: security.IModuleRole, userRole: security.UserRole, page: pages.IPage, workbook: ExcelJS.Workbook): Promise<void> {
+    await page.load().then(loadedPage => addPage(modRole, userRole, loadedPage, workbook));
 }
 
 function addPage(modRole: security.IModuleRole, userRole: security.UserRole, loadedPage: pages.Page, workbook: ExcelJS.Workbook) {
@@ -183,8 +183,8 @@ async function processAllMicroflows(modRole: security.IModuleRole, userRole: sec
     await Promise.all(modRole.model.allMicroflows().map(async (microflow) => processMicroflow(modRole, userRole, microflow)));
 }
 
-async function processMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflow: microflows.IMicroflow): Promise<void> {
-    await microflow.load().then(microflowLoaded => addMicroflow(modRole, userRole, microflowLoaded));
+async function processMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflow: microflows.IMicroflow, workbook: ExcelJS.Workbook): Promise<void> {
+    await microflow.load().then(microflowLoaded => addMicroflow(modRole, userRole, microflowLoaded, workbook));
 }
 function addMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflowLoaded: microflows.Microflow, workbook: ExcelJS.Workbook) {
     const allowed = microflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
@@ -202,8 +202,8 @@ async function processAllNanoflows(modRole: security.IModuleRole, userRole: secu
     await Promise.all(modRole.model.allNanoflows().map(async (nanoflow) => processNanoflow(modRole, userRole, nanoflow)));
 }
 
-async function processNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflow: microflows.INanoflow): Promise<void> {
-    await nanoflow.load().then(nanoflowLoaded => addNanoflow(modRole, userRole, nanoflowLoaded));
+async function processNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflow: microflows.INanoflow, workbook: ExcelJS.Workbook): Promise<void> {
+    await nanoflow.load().then(nanoflowLoaded => addNanoflow(modRole, userRole, nanoflowLoaded, workbook));
 }
 function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflowLoaded: microflows.Nanoflow, workbook: ExcelJS.Workbook) {
     const allowed = nanoflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
@@ -217,7 +217,7 @@ function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole,
 }
 
 
-async function checkIfModuleRoleIsUsedForEntityRole(entity: domainmodels.Entity, accessRules: domainmodels.AccessRule[], modRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
+async function checkIfModuleRoleIsUsedForEntityRole(entity: domainmodels.Entity, accessRules: domainmodels.AccessRule[], modRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     await Promise.all(accessRules.map(async (rule) => {
         if (rule.moduleRoles.filter(entityModRule => entityModRule.name === modRole.name).length > 0) {
             let memberRules = rule.memberAccesses.reduce((acc, memRule) => {
