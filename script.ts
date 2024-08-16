@@ -3,16 +3,17 @@ import { ModelSdkClient, IModel, projects, domainmodels, microflows, pages, navi
 import * as fs from 'fs';
 import * as stream from 'stream';
 import * as officegen from 'officegen';
+import * as ExcelJS from 'exceljs';
 
 // const appId = "{{AppID}}";
 const appId = "c99be9a4-8ccf-4c29-aabb-7ea0c7242ebc";
 const branchName = null // null for mainline
 const wc = null;
 const client = new MendixPlatformClient();
-const xlsx = officegen('xlsx');
+const workbook = new ExcelJS.Workbook();
 let pObj;
 
-const CHUNK_SIZE = 1000; // Aantal items om per keer te verwerken
+const CHUNK_SIZE = 5000; // Verhoogd aantal items om per keer te verwerken
 
 // Functie om lange strings af te kappen
 function truncateString(str: string, maxLength: number = 32000): string {
@@ -22,47 +23,17 @@ function truncateString(str: string, maxLength: number = 32000): string {
     return str;
 }
 
-const sheet = xlsx.makeNewSheet();
-sheet.name = 'Entities';
+const sheetEntities = workbook.addWorksheet('Entities');
+sheetEntities.addRow(['User Role', 'Module', 'Module Role', 'Entity', 'Xpath', 'Create/Delete', 'Member Rules']);
 
-sheet.data[0] = [];
-sheet.data[0][0] = `User Role`;
-sheet.data[0][1] = `Module`;
-sheet.data[0][2] = `Module Role`;
-sheet.data[0][3] = `Entity`;
-sheet.data[0][4] = `Xpath`;
-sheet.data[0][5] = `Create/Delete`;
-sheet.data[0][6] = `Member Rules`;
+const sheetPages = workbook.addWorksheet('Pages');
+sheetPages.addRow(['User Role', 'Module', 'Module Role', 'Page Name', 'Allowed']);
 
-const sheetPages = xlsx.makeNewSheet();
-sheetPages.name = 'Pages';
+const sheetMicroflows = workbook.addWorksheet('Microflows');
+sheetMicroflows.addRow(['User Role', 'Module', 'Module Role', 'Microflows', 'Allowed']);
 
-sheetPages.data[0] = [];
-sheetPages.data[0][0] = `User Role`;
-sheetPages.data[0][1] = `Module`;
-sheetPages.data[0][2] = `Module Role`;
-sheetPages.data[0][3] = `Page Name`;
-sheetPages.data[0][4] = `Allowed`;
-
-const sheetMicroflows = xlsx.makeNewSheet();
-sheetMicroflows.name = 'Microflows';
-
-sheetMicroflows.data[0] = [];
-sheetMicroflows.data[0][0] = `User Role`;
-sheetMicroflows.data[0][1] = `Module`;
-sheetMicroflows.data[0][2] = `Module Role`;
-sheetMicroflows.data[0][3] = `Microflows`;
-sheetMicroflows.data[0][4] = `Allowed`;
-
-const sheetNanoflows = xlsx.makeNewSheet();
-sheetNanoflows.name = 'Nanoflows';
-
-sheetNanoflows.data[0] = [];
-sheetNanoflows.data[0][0] = `User Role`;
-sheetNanoflows.data[0][1] = `Module`;
-sheetNanoflows.data[0][2] = `Module Role`;
-sheetNanoflows.data[0][3] = `Nanoflows`;
-sheetNanoflows.data[0][4] = `Allowed`;
+const sheetNanoflows = workbook.addWorksheet('Nanoflows');
+sheetNanoflows.addRow(['User Role', 'Module', 'Module Role', 'Nanoflows', 'Allowed']);
 
 /*
  * PROJECT TO ANALYZE
@@ -92,9 +63,13 @@ async function main() {
 
     await createUserSecurityDocument(userRoles);
 
-    const out = fs.createWriteStream('MendixSecurityDocument.xlsx');
-    xlsx.generate(out);
-    out.on('finish', () => console.log('Finished creating Document'));
+    await workbook.xlsx.writeFile('MendixSecurityDocument.xlsx');
+    console.log('Finished creating Document');
+    
+    // Forceer garbage collection
+    if (global.gc) {
+        global.gc();
+    }
 }
 
 /**
@@ -177,7 +152,7 @@ async function processPage(modRole: security.IModuleRole, userRole: security.Use
 
 function addPage(modRole: security.IModuleRole, userRole: security.UserRole, loadedPage: pages.Page) {
     const allowed = loadedPage.allowedRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
-    sheetPages.data.push([
+    sheetPages.addRow([
         truncateString(userRole.name),
         truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
         truncateString(modRole.name),
@@ -197,7 +172,7 @@ async function processMicroflow(modRole: security.IModuleRole, userRole: securit
 }
 function addMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflowLoaded: microflows.Microflow) {
     const allowed = microflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
-    sheetMicroflows.data.push([
+    sheetMicroflows.addRow([
         truncateString(userRole.name),
         truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
         truncateString(modRole.name),
@@ -216,7 +191,7 @@ async function processNanoflow(modRole: security.IModuleRole, userRole: security
 }
 function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflowLoaded: microflows.Nanoflow) {
     const allowed = nanoflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
-    sheetNanoflows.data.push([
+    sheetNanoflows.addRow([
         truncateString(userRole.name),
         truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
         truncateString(modRole.name),
@@ -241,7 +216,7 @@ async function checkIfModuleRoleIsUsedForEntityRole(entity: domainmodels.Entity,
             else if (rule.allowCreate) createDelete = 'Create';
             else if (rule.allowDelete) createDelete = 'Delete';
 
-            sheet.data.push([
+            sheetEntities.addRow([
                 truncateString(userRole.name),
                 truncateString(entity.containerAsDomainModel.containerAsModule.name),
                 truncateString(modRole.name),
