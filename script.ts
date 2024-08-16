@@ -1,14 +1,18 @@
 import { MendixPlatformClient, OnlineWorkingCopy } from "mendixplatformsdk";
 import { ModelSdkClient, IModel, projects, domainmodels, microflows, pages, navigation, texts, security, IStructure, menus, IList, nanoflows } from "mendixmodelsdk";
+import * as fs from 'fs';
+import * as stream from 'stream';
+import * as officegen from 'officegen';
+
 // const appId = "{{AppID}}";
 const appId = "c99be9a4-8ccf-4c29-aabb-7ea0c7242ebc";
 const branchName = null // null for mainline
 const wc = null;
 const client = new MendixPlatformClient();
-var officegen = require('officegen');
-var xlsx = officegen('xlsx');
-var fs = require('fs');
-var pObj;
+const xlsx = officegen('xlsx');
+let pObj;
+
+const CHUNK_SIZE = 1000; // Aantal items om per keer te verwerken
 
 // Functie om lange strings af te kappen
 function truncateString(str: string, maxLength: number = 32000): string {
@@ -93,35 +97,20 @@ process.on('warning', (warning) => {
 });
 
 async function main() {
-
-    var repository = app.getRepository();
-    var useBranch: string = "";
-
-    if (branchName === null) {
-        var repositoryInfo = await repository.getInfo();
-        if (repositoryInfo.type === `svn`)
-            useBranch = `trunk`;
-        else
-            useBranch = `main`;
-    } else {
-        useBranch = branchName;
-    }
+    const repository = app.getRepository();
+    const useBranch = branchName === null
+        ? (await repository.getInfo()).type === 'svn' ? 'trunk' : 'main'
+        : branchName;
 
     const workingCopy = await app.createTemporaryWorkingCopy(useBranch);
-
     const projectSecurity = await loadProjectSecurity(workingCopy);
-
     const userRoles = getAllUserRoles(projectSecurity);
 
-    const securityDocument = await createUserSecurityDocument(userRoles);
+    await createUserSecurityDocument(userRoles);
 
-    var out = await fs.createWriteStream('MendixSecurityDocument.xlsx');
+    const out = fs.createWriteStream('MendixSecurityDocument.xlsx');
     xlsx.generate(out);
-    out.on('close', function () {
-        console.log('Finished creating Document');
-    });
-
-
+    out.on('finish', () => console.log('Finished creating Document'));
 }
 
 /**
@@ -129,13 +118,18 @@ async function main() {
 */
 async function createUserSecurityDocument(userRoles: security.UserRole[]) {
     console.log("Creating User Access Matrix");
-    await Promise.all(userRoles.map(async (userRole) => processAllModules(userRole)));
+    for (let i = 0; i < userRoles.length; i += CHUNK_SIZE) {
+        const chunk = userRoles.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (userRole) => processAllModules(userRole)));
+    }
 }
 
 async function processAllModules(userRole: security.UserRole): Promise<void> {
-    // console.debug("processAllModules");
-    var modules = userRole.model.allModules();
-    await Promise.all(modules.map(async (module) => processModule(module, userRole)));
+    const modules = userRole.model.allModules();
+    for (let i = 0; i < modules.length; i += CHUNK_SIZE) {
+        const chunk = modules.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (module) => processModule(module, userRole)));
+    }
 }
 
 async function processModule(module: projects.IModule, userRole: security.UserRole): Promise<void> {
