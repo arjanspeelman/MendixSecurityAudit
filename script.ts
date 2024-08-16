@@ -10,6 +10,14 @@ var xlsx = officegen('xlsx');
 var fs = require('fs');
 var pObj;
 
+// Functie om lange strings af te kappen
+function truncateString(str: string, maxLength: number = 32000): string {
+    if (str && str.length > maxLength) {
+        return str.substring(0, maxLength) + '...';
+    }
+    return str;
+}
+
 const sheet = xlsx.makeNewSheet();
 sheet.name = 'Entities';
 
@@ -174,14 +182,14 @@ async function processPage(modRole: security.IModuleRole, userRole: security.Use
 }
 
 function addPage(modRole: security.IModuleRole, userRole: security.UserRole, loadedPage: pages.Page) {
-    if (loadedPage.allowedRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0) {
-        sheetPages.data.push([`${userRole.name}`, `${modRole.containerAsModuleSecurity.containerAsModule.name}`, `${modRole.name}`, `${loadedPage.name}`, `True`]);
-        // console.debug(`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`,`${modRole.name}`,`${loadedPage.name}`,`True`);
-        // console.debug(`Add page: ${modRole.name}`,`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`);
-    } else {
-        sheetPages.data.push([`${userRole.name}`, `${modRole.containerAsModuleSecurity.containerAsModule.name}`, `${modRole.name}`, `${loadedPage.name}`, `False`]);
-        // console.debug(`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`,`${modRole.name}`,`${loadedPage.name}`,`False`);
-    }
+    const allowed = loadedPage.allowedRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
+    sheetPages.data.push([
+        truncateString(userRole.name),
+        truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
+        truncateString(modRole.name),
+        truncateString(loadedPage.name),
+        allowed ? 'True' : 'False'
+    ]);
 }
 
 
@@ -226,31 +234,28 @@ function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole,
 
 async function checkIfModuleRoleIsUsedForEntityRole(entity: domainmodels.Entity, accessRules: domainmodels.AccessRule[], modRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
     await Promise.all(accessRules.map(async (rule) => {
-        var memberRules = ``;
-        if (rule.moduleRoles.filter(entityModRule => {
-            return entityModRule.name === modRole.name;
-        }).length > 0) {
-            rule.memberAccesses.map(async (memRule) => {
-                if (memRule != null) {
-                    if (memRule.accessRights != null && memRule.attribute != null) {
-                        memberRules += `${memRule.attribute.name}: ${memRule.accessRights.name}\n`;
-                    }
+        if (rule.moduleRoles.filter(entityModRule => entityModRule.name === modRole.name).length > 0) {
+            let memberRules = rule.memberAccesses.reduce((acc, memRule) => {
+                if (memRule && memRule.accessRights && memRule.attribute) {
+                    return acc + `${memRule.attribute.name}: ${memRule.accessRights.name}\n`;
                 }
+                return acc;
+            }, '');
 
-            }
-            );
-            var createDelete;
-            if (rule.allowCreate && rule.allowDelete) {
-                createDelete = `Create/Delete`
-            } else if (rule.allowCreate) {
-                createDelete = `Create`
-            } else if (rule.allowDelete) {
-                createDelete = `Delete`
-            } else {
-                createDelete = `None`
-            }
-            sheet.data.push([`${userRole.name}`, `${entity.containerAsDomainModel.containerAsModule.name}`, `${modRole.name}`, `${entity.name}`, `${rule.xPathConstraint}`, `${createDelete}`, `${memberRules}`]);
-            // console.debug(`${userRole.name},${entity.containerAsDomainModel.containerAsModule.name},${modRole.name},${entity.name},${rule.xPathConstraint},${createDelete},${memberRules}`);
+            let createDelete = 'None';
+            if (rule.allowCreate && rule.allowDelete) createDelete = 'Create/Delete';
+            else if (rule.allowCreate) createDelete = 'Create';
+            else if (rule.allowDelete) createDelete = 'Delete';
+
+            sheet.data.push([
+                truncateString(userRole.name),
+                truncateString(entity.containerAsDomainModel.containerAsModule.name),
+                truncateString(modRole.name),
+                truncateString(entity.name),
+                truncateString(rule.xPathConstraint),
+                createDelete,
+                truncateString(memberRules)
+            ]);
         }
     }));
 }
