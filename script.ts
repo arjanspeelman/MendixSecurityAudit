@@ -110,8 +110,7 @@ async function processAllModules(userRole: security.UserRole, workbook: ExcelJS.
 async function processModule(module: projects.IModule, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     // console.debug(`Processing module: ${module.name}`);
     var securities = await getAllModuleSecurities(module);
-    await Promise.all(securities.map(async (security) => loadAllModuleSecurities(securities, userRole)));
-
+    await Promise.all(securities.map(async (security) => loadAllModuleSecurities(securities, userRole, workbook)));
 }
 async function getAllModuleSecurities(module: projects.IModule): Promise<security.IModuleSecurity[]> {
     // console.debug(`Processing getAllModuleSecurities: ${module.name}`);
@@ -126,12 +125,12 @@ async function getAllModuleSecurities(module: projects.IModule): Promise<securit
     });
 }
 
-async function loadAllModuleSecurities(moduleSecurities: security.IModuleSecurity[], userRole: security.UserRole): Promise<void> {
-    await Promise.all(moduleSecurities.map(async (mSecurity) => processLoadedModSec(mSecurity, userRole)));
+async function loadAllModuleSecurities(moduleSecurities: security.IModuleSecurity[], userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
+    await Promise.all(moduleSecurities.map(async (mSecurity) => processLoadedModSec(mSecurity, userRole, workbook)));
 }
 
-async function processLoadedModSec(modSec: security.IModuleSecurity, userRole: security.UserRole): Promise<void> {
-    await Promise.all(modSec.moduleRoles.map(async (modRole) => processModRole(modRole, userRole)));
+async function processLoadedModSec(modSec: security.IModuleSecurity, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
+    await Promise.all(modSec.moduleRoles.map(async (modRole) => processModRole(modRole, userRole, workbook)));
 }
 
 
@@ -143,15 +142,14 @@ async function loadModSec(modSec: security.IModuleSecurity): Promise<security.Mo
 
 
 
-async function processModRole(modRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
+async function processModRole(modRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     if (addIfModuleRoleInUserRole(modRole, userRole)) {
         await Promise.all(modRole.containerAsModuleSecurity.containerAsModule.domainModel.entities.map(async (entity) =>
-            processAllEntitySecurityRules(entity, modRole, userRole)
-                .then(() => processAllPages(modRole, userRole))
-                .then(() => processAllMicroflows(modRole, userRole))
-                .then(() => processAllNanoflows(modRole, userRole))));
+            processAllEntitySecurityRules(entity, modRole, userRole, workbook)
+                .then(() => processAllPages(modRole, userRole, workbook))
+                .then(() => processAllMicroflows(modRole, userRole, workbook))
+                .then(() => processAllNanoflows(modRole, userRole, workbook))));
     }
-
 }
 async function processAllEntitySecurityRules(entity: domainmodels.IEntity, moduleRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
     await entity.load().then(loadedEntity =>
