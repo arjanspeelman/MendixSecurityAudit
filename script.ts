@@ -177,8 +177,8 @@ function addPage(modRole: security.IModuleRole, userRole: security.UserRole, loa
 
 
 ///section to process microflows
-async function processAllMicroflows(modRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
-    await Promise.all(modRole.model.allMicroflows().map(async (microflow) => processMicroflow(modRole, userRole, microflow)));
+async function processAllMicroflows(modRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
+    await Promise.all(modRole.model.allMicroflows().map(async (microflow) => processMicroflow(modRole, userRole, microflow, workbook)));
 }
 
 async function processMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflow: microflows.IMicroflow, workbook: ExcelJS.Workbook): Promise<void> {
@@ -196,8 +196,8 @@ function addMicroflow(modRole: security.IModuleRole, userRole: security.UserRole
 }
 
 ///section to process nanoflows
-async function processAllNanoflows(modRole: security.IModuleRole, userRole: security.UserRole): Promise<void> {
-    await Promise.all(modRole.model.allNanoflows().map(async (nanoflow) => processNanoflow(modRole, userRole, nanoflow)));
+async function processAllNanoflows(modRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
+    await Promise.all(modRole.model.allNanoflows().map(async (nanoflow) => processNanoflow(modRole, userRole, nanoflow, workbook)));
 }
 
 async function processNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflow: microflows.INanoflow, workbook: ExcelJS.Workbook): Promise<void> {
