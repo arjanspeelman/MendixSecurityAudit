@@ -5,6 +5,10 @@ import * as stream from 'stream';
 import * as officegen from 'officegen';
 import * as ExcelJS from 'exceljs';
 
+const v8 = require('v8');
+v8.setFlagsFromString('--expose_gc');
+const gc = global.gc;
+
 // const appId = "{{AppID}}";
 const appId = "c99be9a4-8ccf-4c29-aabb-7ea0c7242ebc";
 const branchName = null // null for mainline
@@ -65,7 +69,7 @@ async function main() {
 
     await workbook.xlsx.writeFile('MendixSecurityDocument.xlsx');
     console.log('Finished creating Document');
-    
+
     // Forceer garbage collection
     if (global.gc) {
         global.gc();
