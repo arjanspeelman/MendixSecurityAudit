@@ -144,11 +144,15 @@ async function loadModSec(modSec: security.IModuleSecurity): Promise<security.Mo
 
 async function processModRole(modRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     if (addIfModuleRoleInUserRole(modRole, userRole)) {
+        // Process entities
         await Promise.all(modRole.containerAsModuleSecurity.containerAsModule.domainModel.entities.map(async (entity) =>
             processAllEntitySecurityRules(entity, modRole, userRole, workbook)
-                .then(() => processAllPages(modRole, userRole, workbook))
-                .then(() => processAllMicroflows(modRole, userRole, workbook))
-                .then(() => processAllNanoflows(modRole, userRole, workbook))));
+        ));
+
+        // Process pages, microflows, and nanoflows once per module role
+        await processAllPages(modRole, userRole, workbook);
+        await processAllMicroflows(modRole, userRole, workbook);
+        await processAllNanoflows(modRole, userRole, workbook);
     }
 }
 async function processAllEntitySecurityRules(entity: domainmodels.IEntity, moduleRole: security.IModuleRole, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
