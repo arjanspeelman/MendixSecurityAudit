@@ -202,14 +202,14 @@ async function processMicroflow(modRole: security.IModuleRole, userRole: securit
     await microflow.load().then(microflowLoaded => addMicroflow(modRole, userRole, microflowLoaded));
 }
 function addMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflowLoaded: microflows.Microflow) {
-    if (microflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0) {
-        sheetMicroflows.data.push([`${userRole.name}`, `${modRole.containerAsModuleSecurity.containerAsModule.name}`, `${modRole.name}`, `${microflowLoaded.name}`, `True`]);
-        // console.debug(`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`,`${modRole.name}`,`${microflowLoaded.name}`,`True`);
-        // console.debug(`Add MF: ${modRole.name}`,`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`);
-    } else {
-        sheetMicroflows.data.push([`${userRole.name}`, `${modRole.containerAsModuleSecurity.containerAsModule.name}`, `${modRole.name}`, `${microflowLoaded.name}`, `False`]);
-        // console.debug(`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`,`${modRole.name}`,`${microflowLoaded.name}`,`False`);
-    }
+    const allowed = microflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
+    sheetMicroflows.data.push([
+        truncateString(userRole.name),
+        truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
+        truncateString(modRole.name),
+        truncateString(microflowLoaded.name),
+        allowed ? 'True' : 'False'
+    ]);
 }
 
 ///section to process nanoflows
@@ -221,14 +221,14 @@ async function processNanoflow(modRole: security.IModuleRole, userRole: security
     await nanoflow.load().then(nanoflowLoaded => addNanoflow(modRole, userRole, nanoflowLoaded));
 }
 function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflowLoaded: microflows.Nanoflow) {
-    if (nanoflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0) {
-        sheetNanoflows.data.push([`${userRole.name}`, `${modRole.containerAsModuleSecurity.containerAsModule.name}`, `${modRole.name}`, `${nanoflowLoaded.name}`, `True`]);
-        // console.debug(`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`,`${modRole.name}`,`${microflowLoaded.name}`,`True`);
-        // console.debug(`Add MF: ${modRole.name}`,`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`);
-    } else {
-        sheetNanoflows.data.push([`${userRole.name}`, `${modRole.containerAsModuleSecurity.containerAsModule.name}`, `${modRole.name}`, `${nanoflowLoaded.name}`, `False`]);
-        // console.debug(`${userRole.name}`,`${modRole.containerAsModuleSecurity.containerAsModule.name}`,`${modRole.name}`,`${microflowLoaded.name}`,`False`);
-    }
+    const allowed = nanoflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
+    sheetNanoflows.data.push([
+        truncateString(userRole.name),
+        truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
+        truncateString(modRole.name),
+        truncateString(nanoflowLoaded.name),
+        allowed ? 'True' : 'False'
+    ]);
 }
 
 
