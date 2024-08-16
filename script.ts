@@ -29,19 +29,15 @@ function truncateString(str: string, maxLength: number = 32000): string {
 // Functie om een nieuwe Excel workbook en worksheets te maken
 function createWorkbook() {
     const workbook = new ExcelJS.Workbook();
-    const sheetEntities = workbook.addWorksheet('Entities');
-    sheetEntities.addRow(['User Role', 'Module', 'Module Role', 'Entity', 'Xpath', 'Create/Delete', 'Member Rules']);
-
-    const sheetPages = workbook.addWorksheet('Pages');
-    sheetPages.addRow(['User Role', 'Module', 'Module Role', 'Page Name', 'Allowed']);
-
-    const sheetMicroflows = workbook.addWorksheet('Microflows');
-    sheetMicroflows.addRow(['User Role', 'Module', 'Module Role', 'Microflows', 'Allowed']);
-
-    const sheetNanoflows = workbook.addWorksheet('Nanoflows');
-    sheetNanoflows.addRow(['User Role', 'Module', 'Module Role', 'Nanoflows', 'Allowed']);
-
+    workbook.addWorksheet('Entities').addRow(['User Role', 'Module', 'Module Role', 'Entity', 'Xpath', 'Create/Delete', 'Member Rules']);
+    workbook.addWorksheet('Pages').addRow(['User Role', 'Module', 'Module Role', 'Page Name', 'Allowed']);
+    workbook.addWorksheet('Microflows').addRow(['User Role', 'Module', 'Module Role', 'Microflows', 'Allowed']);
+    workbook.addWorksheet('Nanoflows').addRow(['User Role', 'Module', 'Module Role', 'Nanoflows', 'Allowed']);
     return workbook;
+}
+
+function getWorksheet(workbook: ExcelJS.Workbook, name: string): ExcelJS.Worksheet {
+    return workbook.getWorksheet(name);
 }
 
 /*
@@ -103,7 +99,7 @@ async function processAllModules(userRole: security.UserRole, workbook: ExcelJS.
     const modules = userRole.model.allModules();
     for (let i = 0; i < modules.length; i += CHUNK_SIZE) {
         const chunk = modules.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(async (module) => processModule(module, userRole, workbook)));
+        await Promise.all(chunk.map(async (module) => processModule(module, userRole)));
         // Forceer garbage collection na elke chunk
         if (global.gc) {
             global.gc();
@@ -111,7 +107,7 @@ async function processAllModules(userRole: security.UserRole, workbook: ExcelJS.
     }
 }
 
-async function processModule(module: projects.IModule, userRole: security.UserRole): Promise<void> {
+async function processModule(module: projects.IModule, userRole: security.UserRole, workbook: ExcelJS.Workbook): Promise<void> {
     // console.debug(`Processing module: ${module.name}`);
     var securities = await getAllModuleSecurities(module);
     await Promise.all(securities.map(async (security) => loadAllModuleSecurities(securities, userRole)));
@@ -170,9 +166,9 @@ async function processPage(modRole: security.IModuleRole, userRole: security.Use
     await page.load().then(loadedPage => addPage(modRole, userRole, loadedPage));
 }
 
-function addPage(modRole: security.IModuleRole, userRole: security.UserRole, loadedPage: pages.Page) {
+function addPage(modRole: security.IModuleRole, userRole: security.UserRole, loadedPage: pages.Page, workbook: ExcelJS.Workbook) {
     const allowed = loadedPage.allowedRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
-    sheetPages.addRow([
+    getWorksheet(workbook, 'Pages').addRow([
         truncateString(userRole.name),
         truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
         truncateString(modRole.name),
@@ -190,9 +186,9 @@ async function processAllMicroflows(modRole: security.IModuleRole, userRole: sec
 async function processMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflow: microflows.IMicroflow): Promise<void> {
     await microflow.load().then(microflowLoaded => addMicroflow(modRole, userRole, microflowLoaded));
 }
-function addMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflowLoaded: microflows.Microflow) {
+function addMicroflow(modRole: security.IModuleRole, userRole: security.UserRole, microflowLoaded: microflows.Microflow, workbook: ExcelJS.Workbook) {
     const allowed = microflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
-    sheetMicroflows.addRow([
+    getWorksheet(workbook, 'Microflows').addRow([
         truncateString(userRole.name),
         truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
         truncateString(modRole.name),
@@ -209,9 +205,9 @@ async function processAllNanoflows(modRole: security.IModuleRole, userRole: secu
 async function processNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflow: microflows.INanoflow): Promise<void> {
     await nanoflow.load().then(nanoflowLoaded => addNanoflow(modRole, userRole, nanoflowLoaded));
 }
-function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflowLoaded: microflows.Nanoflow) {
+function addNanoflow(modRole: security.IModuleRole, userRole: security.UserRole, nanoflowLoaded: microflows.Nanoflow, workbook: ExcelJS.Workbook) {
     const allowed = nanoflowLoaded.allowedModuleRoles.filter(allowedRole => allowedRole.name == modRole.name).length > 0;
-    sheetNanoflows.addRow([
+    getWorksheet(workbook, 'Nanoflows').addRow([
         truncateString(userRole.name),
         truncateString(modRole.containerAsModuleSecurity.containerAsModule.name),
         truncateString(modRole.name),
@@ -236,7 +232,7 @@ async function checkIfModuleRoleIsUsedForEntityRole(entity: domainmodels.Entity,
             else if (rule.allowCreate) createDelete = 'Create';
             else if (rule.allowDelete) createDelete = 'Delete';
 
-            sheetEntities.addRow([
+            getWorksheet(workbook, 'Entities').addRow([
                 truncateString(userRole.name),
                 truncateString(entity.containerAsDomainModel.containerAsModule.name),
                 truncateString(modRole.name),
